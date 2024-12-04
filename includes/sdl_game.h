@@ -8,4 +8,7 @@ typedef struct {
     SDL_Renderer* renderer;
     Game* gol;
     int updating;
+    int cell_x;
+    int cell_y;
+    int squish_factor;
 } GOL_SDL;
