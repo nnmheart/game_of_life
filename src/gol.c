@@ -1,18 +1,8 @@
 #include<stdio.h>
 #include<stdint.h>
 #include<malloc.h>
+#include<gol.h>
 #include<synchapi.h> // Windows header file that has "Sleep"
-
-#define get_cell(game, x, y) (game->cells[(y) * game->width + (x)])
-#define set_cell(game, x, y, val) (game->cells[(y) * game->width + (x)] = (val))
-#define set_next(game, x, y, val) (game->next_cells[(y) * game->width + (x)] = (val))
-
-typedef struct Game {
-    int width;
-    int height;
-    uint8_t* cells;
-    uint8_t* next_cells;
-} Game;
 
 Game* new_game(int width, int height) {
     Game* game = (Game*) malloc(sizeof(Game));
@@ -92,7 +82,7 @@ void game_tick(Game* game) {
     }
 }
 
-void main() {
+/*void main() {
     Game* game = new_game(50, 25);
     printf("Created game.\n");
 
@@ -119,4 +109,4 @@ void main() {
         game_tick(game);
         game_print(game, 1);
     }
-}
+}*/
