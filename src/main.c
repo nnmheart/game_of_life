@@ -3,8 +3,8 @@
 #include<gol.h>
 #include<sdl_game.h>
 
-const int SCREEN_WIDTH = 800;
-const int SCREEN_HEIGHT = 500;
+int SCREEN_WIDTH = 800;
+int SCREEN_HEIGHT = 500;
 const int framerate = 30;
 const int update_every_tick = 10;
 const int original_cell_length = 26;
@@ -12,6 +12,7 @@ int cell_length = 26;
 
 GOL_SDL* gol_sdl;
 int tick = 0;
+int resized = 0;
 
 void on_exit() {
     SDL_DestroyWindow(gol_sdl->window);
@@ -26,6 +27,11 @@ void handle_events() {
         if (e.type == SDL_QUIT) {
             gol_sdl->running = 0;
             return;
+        }
+        if (e.type == SDL_WINDOWEVENT) {
+            if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
+                resized = 1;
+            }
         }
         if (e.type == SDL_KEYDOWN) {
             switch (e.key.keysym.sym) {
@@ -84,6 +90,12 @@ void render() {
 
     for (int gy = 0; gy < SCREEN_HEIGHT; gy += (cell_length + 4)) {
         for (int gx = 0; gx < SCREEN_WIDTH; gx += (cell_length + 4)) {
+            int cell_y = gy / (cell_length + 4) + gol_sdl->cell_y;
+            int cell_x = gx / (cell_length + 4) + gol_sdl->cell_x;
+
+            if (cell_y > gol->height) continue;
+            if (cell_x > gol->width) continue;
+
             SDL_Rect rect = {
                 gx+2, 
                 gy+2, 
@@ -94,8 +106,6 @@ void render() {
                 renderer, 
                 &rect
             );
-            int cell_y = gy / (cell_length + 4) + gol_sdl->cell_y;
-            int cell_x = gx / (cell_length + 4) + gol_sdl->cell_x;
 
             if (gol->cells[cell_y * gol->width + cell_x]) {
                 SDL_RenderFillRect(renderer, &rect);
@@ -121,7 +131,7 @@ int main(int argc, char* args[]) {
         SDL_WINDOWPOS_UNDEFINED,
         SCREEN_WIDTH,
         SCREEN_HEIGHT,
-        0
+        SDL_WINDOW_RESIZABLE
     );
 
     if (window == NULL) {
@@ -134,7 +144,7 @@ int main(int argc, char* args[]) {
     gol_sdl->running = 1;
     gol_sdl->window = window;
     gol_sdl->renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    gol_sdl->gol = new_game(60, 60);
+    gol_sdl->gol = new_game(1000, 1000);
     gol_sdl->updating = 1;
     gol_sdl->cell_x = 0;
     gol_sdl->cell_y = 0;
@@ -157,6 +167,12 @@ int main(int argc, char* args[]) {
 
     while (gol_sdl->running) {
         handle_events();
+        if (resized) {
+            SDL_GetWindowSize(gol_sdl->window, &SCREEN_WIDTH, &SCREEN_HEIGHT);
+            SDL_DestroyRenderer(gol_sdl->renderer);
+            gol_sdl->renderer = SDL_CreateRenderer(gol_sdl->window, -1, SDL_RENDERER_ACCELERATED);
+            resized = 0;
+        }
         if (tick == update_every_tick) {
             if (gol_sdl->updating) game_tick(gol_sdl->gol);
             tick = 0;
