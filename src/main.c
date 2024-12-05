@@ -9,6 +9,18 @@ const int framerate = 30;
 const int update_every_tick = 10;
 const int original_cell_length = 26;
 int cell_length = 26;
+int mouse_x;
+int mouse_y;
+
+const int BACKGROUND_COLOR   = 0x111111;
+const int CELL_BORDER_COLOR  = 0x444444;
+const int CELL_ALIVE_COLOR   = 0xCCCCCC;
+const int CELL_DEAD_COLOR    = 0x000000;
+const int CELL_HOVERED_COLOR = 0x555555;
+
+#define RGB_R(val) (((val) & 0xFF0000) >> 16)
+#define RGB_G(val) (((val) & 0x00FF00) >> 8)
+#define RGB_B(val) (((val) & 0x0000FF) >> 0)
 
 GOL_SDL* gol_sdl;
 int tick = 0;
@@ -17,6 +29,19 @@ int resized = 0;
 void on_exit() {
     SDL_DestroyWindow(gol_sdl->window);
     SDL_Quit();
+}
+
+void mark_cell_by_coords(int x, int y) {
+    Game* gol = gol_sdl->gol;
+    int cx = x / (cell_length + 4) + gol_sdl->cell_x;
+    int cy = y / (cell_length + 4) + gol_sdl->cell_y;
+
+    if (cx > gol->width) return;
+    if (cy > gol->height) return;
+
+    int index = cy * gol->width + cx;
+    gol->cells[index] = !gol->cells[index];
+    gol->next_cells[index] = gol->cells[index];
 }
 
 void handle_events() {
@@ -31,6 +56,12 @@ void handle_events() {
         if (e.type == SDL_WINDOWEVENT) {
             if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
                 resized = 1;
+            }
+        }
+        if ((e.type == SDL_MOUSEBUTTONDOWN) || (e.type == SDL_MOUSEMOTION)) {
+            SDL_GetMouseState(&mouse_x, &mouse_y);
+            if (e.type == SDL_MOUSEBUTTONDOWN) {
+                mark_cell_by_coords(mouse_x, mouse_y);
             }
         }
         if (e.type == SDL_KEYDOWN) {
@@ -83,10 +114,15 @@ void handle_events() {
 void render() {
     SDL_Renderer* renderer = gol_sdl->renderer;
     Game* gol = gol_sdl->gol;
-    SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+    SDL_SetRenderDrawColor(
+        renderer,
+        RGB_R(BACKGROUND_COLOR),
+        RGB_G(BACKGROUND_COLOR),
+        RGB_B(BACKGROUND_COLOR),
+        0xFF
+    );
     SDL_RenderClear(renderer);
 
-    SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
 
     for (int gy = 0; gy < SCREEN_HEIGHT; gy += (cell_length + 4)) {
         for (int gx = 0; gx < SCREEN_WIDTH; gx += (cell_length + 4)) {
@@ -97,19 +133,57 @@ void render() {
             if (cell_x > gol->width) continue;
 
             SDL_Rect rect = {
-                gx+2, 
-                gy+2, 
+                gx + 2,
+                gy + 2,
                 cell_length, 
                 cell_length
             };
+            SDL_SetRenderDrawColor(
+                renderer,
+                RGB_R(CELL_BORDER_COLOR),
+                RGB_G(CELL_BORDER_COLOR),
+                RGB_B(CELL_BORDER_COLOR),
+                0xFF
+            );
             SDL_RenderDrawRect(
                 renderer, 
                 &rect
             );
 
+            rect.x += 1;
+            rect.y += 1;
+            rect.w -= 2;
+            rect.h -= 2;
+
             if (gol->cells[cell_y * gol->width + cell_x]) {
+                SDL_SetRenderDrawColor(
+                    renderer,
+                    RGB_R(CELL_ALIVE_COLOR),
+                    RGB_G(CELL_ALIVE_COLOR),
+                    RGB_B(CELL_ALIVE_COLOR),
+                    0xFF
+                );
                 SDL_RenderFillRect(renderer, &rect);
+            } else {
+                if ((gx < mouse_x) && (mouse_x < (gx + cell_length)) && (gy < mouse_y) && (mouse_y < (gy + cell_length))) {
+                    SDL_SetRenderDrawColor(
+                        renderer,
+                        RGB_R(CELL_HOVERED_COLOR),
+                        RGB_G(CELL_HOVERED_COLOR),
+                        RGB_B(CELL_HOVERED_COLOR),
+                        0xFF
+                    );
+                }else {
+                    SDL_SetRenderDrawColor(
+                        renderer,
+                        RGB_R(CELL_DEAD_COLOR),
+                        RGB_R(CELL_DEAD_COLOR),
+                        RGB_R(CELL_DEAD_COLOR),
+                        0xFF
+                    );
+                }
             }
+            SDL_RenderFillRect(renderer, &rect);
         }
     }
 
