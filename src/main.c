@@ -11,6 +11,11 @@ const int original_cell_length = 26;
 int cell_length = 26;
 int mouse_x;
 int mouse_y;
+int shift_held = 0;
+int shift_factor = 5;
+int show_grid = 1;
+
+#define grid_move_speed ((shift_held ? 5 : 1) * (gol_sdl->squish_factor))
 
 const int BACKGROUND_COLOR   = 0x111111;
 const int CELL_BORDER_COLOR  = 0x444444;
@@ -64,40 +69,56 @@ void handle_events() {
                 mark_cell_by_coords(mouse_x, mouse_y);
             }
         }
+        if (e.type == SDL_KEYUP) {
+            switch (e.key.keysym.sym) {
+                case SDLK_LSHIFT:
+                    shift_held = 0;
+                    break;
+            }
+        }
         if (e.type == SDL_KEYDOWN) {
             switch (e.key.keysym.sym) {
+                case SDLK_LSHIFT:
+                    shift_held = 1;
+                    break;
+                case SDLK_g:
+                    show_grid = !show_grid;
+                    break;
+                case SDLK_SPACE:
                 case SDLK_p:
                     gol_sdl->updating = !gol_sdl->updating;
                     break;
                 case SDLK_w:
-                    gol_sdl->cell_y -= 1;
+                    gol_sdl->cell_y -= grid_move_speed;
                     if (gol_sdl->cell_y < 0) {
                         gol_sdl->cell_y = 0;
                     }
                     break;
                 case SDLK_s:
-                    gol_sdl->cell_y += 1;
+                    gol_sdl->cell_y += grid_move_speed;
                     if (gol_sdl->cell_y == game->height) {
                         gol_sdl->cell_y = game->height - 1;
                     }
                     break;
                 case SDLK_a:
-                    gol_sdl->cell_x -= 1;
+                    gol_sdl->cell_x -= grid_move_speed;
                     if (gol_sdl->cell_x < 0) {
                         gol_sdl->cell_x = 0;
                     }
                     break;
                 case SDLK_d:
-                    gol_sdl->cell_x += 1;
+                    gol_sdl->cell_x += grid_move_speed;
                     if (gol_sdl->cell_x == game->width) {
                         gol_sdl->cell_x = game->width - 1;
                     }
                     break;
+                case SDLK_e:
                 case SDLK_PLUS:
                 case SDLK_KP_PLUS:
                     gol_sdl->squish_factor += 1;
                     cell_length = original_cell_length / gol_sdl->squish_factor;
                     break;
+                case SDLK_q:
                 case SDLK_MINUS:
                 case SDLK_KP_MINUS:
                     gol_sdl->squish_factor -= 1;
@@ -138,23 +159,26 @@ void render() {
                 cell_length, 
                 cell_length
             };
-            SDL_SetRenderDrawColor(
-                renderer,
-                RGB_R(CELL_BORDER_COLOR),
-                RGB_G(CELL_BORDER_COLOR),
-                RGB_B(CELL_BORDER_COLOR),
-                0xFF
-            );
-            SDL_RenderDrawRect(
-                renderer, 
-                &rect
-            );
+            if (show_grid) {
+                SDL_SetRenderDrawColor(
+                    renderer,
+                    RGB_R(CELL_BORDER_COLOR),
+                    RGB_G(CELL_BORDER_COLOR),
+                    RGB_B(CELL_BORDER_COLOR),
+                    0xFF
+                );
+                SDL_RenderDrawRect(
+                    renderer, 
+                    &rect
+                );
+            }
 
             rect.x += 1;
             rect.y += 1;
             rect.w -= 2;
             rect.h -= 2;
 
+            int should_render = 0;
             if (gol->cells[cell_y * gol->width + cell_x]) {
                 SDL_SetRenderDrawColor(
                     renderer,
@@ -163,7 +187,8 @@ void render() {
                     RGB_B(CELL_ALIVE_COLOR),
                     0xFF
                 );
-                SDL_RenderFillRect(renderer, &rect);
+                should_render = 1;
+                //SDL_RenderFillRect(renderer, &rect);
             } else {
                 if ((gx < mouse_x) && (mouse_x < (gx + cell_length)) && (gy < mouse_y) && (mouse_y < (gy + cell_length))) {
                     SDL_SetRenderDrawColor(
@@ -173,17 +198,23 @@ void render() {
                         RGB_B(CELL_HOVERED_COLOR),
                         0xFF
                     );
+                    should_render = 1;
                 }else {
-                    SDL_SetRenderDrawColor(
-                        renderer,
-                        RGB_R(CELL_DEAD_COLOR),
-                        RGB_R(CELL_DEAD_COLOR),
-                        RGB_R(CELL_DEAD_COLOR),
-                        0xFF
-                    );
+                    if (show_grid) {
+                        should_render = 1;
+                        SDL_SetRenderDrawColor(
+                            renderer,
+                            RGB_R(CELL_DEAD_COLOR),
+                            RGB_R(CELL_DEAD_COLOR),
+                            RGB_R(CELL_DEAD_COLOR),
+                            0xFF
+                        );
+                    } else {
+                        should_render = 0;
+                    }
                 }
             }
-            SDL_RenderFillRect(renderer, &rect);
+            if (should_render) SDL_RenderFillRect(renderer, &rect);
         }
     }
 
